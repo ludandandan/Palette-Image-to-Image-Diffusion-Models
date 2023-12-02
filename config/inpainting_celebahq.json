@@ -1,6 +1,6 @@
 {
     "name": "inpainting_celebahq", // experiments name
-    "gpu_ids": [0], // gpu ids list, default is single 0
+    "gpu_ids": [0,1], // gpu ids list, default is single 0
     "seed" : -1, // random seed, seed <0 represents randomization not used 
     "finetune_norm": false, // find the parameters to optimize
 
@@ -10,7 +10,7 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        "resume_state": "experiments/train_inpainting_celebahq_220426_233652/checkpoint/190" 
+        "resume_state": "experiments/experiments/checkpoint/100" 
         // "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
