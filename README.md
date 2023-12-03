@@ -134,7 +134,7 @@ self.load_network(network=self.netG, network_label=netG_label, strict=False)
 ```python
 python run.py -p train -c config/inpainting_celebahq.json
 ```
-
+相关训练结果会保存在experiment/train_inpainting_celebahq_xx文件夹中（包括训练的log，checkpoint和验证产生的结果等）
 We test the U-Net backbone used in `SR3` and `Guided Diffusion`,  and `Guided Diffusion` one have a more robust performance in our current experiments.  More choices about **backbone**, **loss** and **metric** can be found in `which_networks`  part of configure file.
 
 ### Test
@@ -145,7 +145,8 @@ We test the U-Net backbone used in `SR3` and `Guided Diffusion`,  and `Guided Di
 ```python
 python run.py -p test -c config/inpainting_celebahq.json
 ```
-
+测试时要把需要用的checkpoing的位置在配置文件中修改好 path.resume_state
+相关训练结果会保存在experiment/test_inpainting_celebahq_xx文件夹中（包括测试的log，测试产生的结果等）
 ### Evaluation
 1. Create two folders saving ground truth images and sample images, and their file names need to correspond to each other.
 
