@@ -160,7 +160,7 @@ class ColorizationDataset(data.Dataset):
 
     def __getitem__(self, index):
         ret = {}
-        file_name = str(self.flist[index]).zfill(5) + '.png'
+        file_name = str(self.flist[index]).zfill(5)
 
         img = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'color', file_name)))
         cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'gray', file_name)))
