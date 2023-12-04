@@ -31,16 +31,16 @@ def init_obj(opt, logger, *args, default_file_name='default file', given_module=
         if given_module is not None:
             module = given_module
         else:
-            module = importlib.import_module(file_name)
+            module = importlib.import_module(file_name) # 根据文件名导入模块
         
-        attr = getattr(module, class_name)
-        kwargs = opt.get('args', {})
+        attr = getattr(module, class_name) # 根据类名获取类，动态地获取模块中指定名称的属性或方法（会初始化吗）
+        kwargs = opt.get('args', {}) # 如果键不存在，就把{}赋值给kwargs
         kwargs.update(modify_kwargs)
         ''' import class or function with args '''
-        if isinstance(attr, type): 
-            ret = attr(*args, **kwargs)
+        if isinstance(attr, type): #检查 attr 是否是一个类对象（类型对象），type表示对象的类型
+            ret = attr(*args, **kwargs) # 初始化类对象
             ret.__name__  = ret.__class__.__name__
-        elif isinstance(attr, FunctionType): 
+        elif isinstance(attr, FunctionType): # 检查 attr 是否是一个函数类型的实例
             ret = partial(attr, *args, **kwargs)
             ret.__name__  = attr.__name__
             # ret = attr
@@ -71,7 +71,7 @@ class NoneDict(dict):
         return None
 
 def dict_to_nonedict(opt):
-    """ convert to NoneDict, which return None for missing key. """
+    """ convert to NoneDict, which return None for missing key. """ #用于将输入的字典（opt）转换为一个特殊的数据结构，称为 NoneDict。这个 NoneDict 与普通的字典不同，当你尝试访问不存在的键时，它不会引发 KeyError，而是返回 None
     if isinstance(opt, dict):
         new_opt = dict()
         for key, sub_opt in opt.items():
@@ -94,13 +94,13 @@ def dict2str(opt, indent_l=1):
             msg += ' ' * (indent_l * 2) + k + ': ' + str(v) + '\n'
     return msg
 
-def parse(args):
+def parse(args): #<class 'argparse.Namespace'>
     json_str = ''
-    with open(args.config, 'r') as f:
-        for line in f:
-            line = line.split('//')[0] + '\n'
-            json_str += line
-    opt = json.loads(json_str, object_pairs_hook=OrderedDict)
+    with open(args.config, 'r') as f: # 打开配置文件
+        for line in f: # 逐行读取
+            line = line.split('//')[0] + '\n' # 去除注释
+            json_str += line # 拼接成一个字符串
+    opt = json.loads(json_str, object_pairs_hook=OrderedDict) #object_pairs_hook: 是一个可选参数，它用于指定一个可调用对象，用于将解析后的 JSON 对象的键值对转换为 Python 对象。在这里，OrderedDict 是一个有序字典，用于保持 JSON 对象中键值对的顺序
 
     ''' replace the config context using args '''
     opt['phase'] = args.phase
@@ -146,7 +146,7 @@ def parse(args):
         if name in ['config', 'models', 'core', 'slurm', 'data']:
             shutil.copytree(name, os.path.join(opt['path']['code'], name), ignore=shutil.ignore_patterns("*.pyc", "__pycache__"))
         if '.py' in name or '.sh' in name:
-            shutil.copy(name, opt['path']['code'])
+            shutil.copy(name, opt['path']['code']) # 将源文件复制到目标文件夹
     return dict_to_nonedict(opt)
 
 

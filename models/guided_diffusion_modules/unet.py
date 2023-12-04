@@ -31,7 +31,7 @@ class EmbedBlock(nn.Module):
 class EmbedSequential(nn.Sequential, EmbedBlock):
     """
     A sequential module that passes embeddings to the children that
-    support it as an extra input.
+    support it as an extra input. 是一个顺序模块，可以将EmbedBlock传递给需要它的子模块
     """
 
     def forward(self, x, emb):
@@ -67,9 +67,9 @@ class Upsample(nn.Module):
 
 class Downsample(nn.Module):
     """
-    A downsampling layer with an optional convolution.
-    :param channels: channels in the inputs and outputs.
-    :param use_conv: a bool determining if a convolution is applied.
+    A downsampling layer with an optional convolution. # 降采样层，可选卷积
+    :param channels: channels in the inputs and outputs. # 输入和输出通道数
+    :param use_conv: a bool determining if a convolution is applied. # 是否使用卷积
     """
 
     def __init__(self, channels, use_conv, out_channel=None):
@@ -82,7 +82,7 @@ class Downsample(nn.Module):
             self.op = nn.Conv2d(
                 self.channels, self.out_channel, 3, stride=stride, padding=1
             )
-        else:
+        else:# 如果不使用卷积，直接使用平均池化
             assert self.channels == self.out_channel
             self.op = nn.AvgPool2d(kernel_size=stride, stride=stride)
 
@@ -119,7 +119,7 @@ class ResBlock(EmbedBlock):
         down=False,
     ):
         super().__init__()
-        self.channels = channels
+        self.channels = channels 
         self.emb_channels = emb_channels
         self.dropout = dropout
         self.out_channel = out_channel or channels
@@ -127,8 +127,8 @@ class ResBlock(EmbedBlock):
         self.use_checkpoint = use_checkpoint
         self.use_scale_shift_norm = use_scale_shift_norm
 
-        self.in_layers = nn.Sequential(
-            normalization(channels),
+        self.in_layers = nn.Sequential(# 输入层： 规范化-激活-卷积；channels - self.out_channel
+            normalization(channels), # GroupNorm32
             SiLU(),
             nn.Conv2d(channels, self.out_channel, 3, padding=1),
         )
@@ -139,31 +139,31 @@ class ResBlock(EmbedBlock):
             self.h_upd = Upsample(channels, False)
             self.x_upd = Upsample(channels, False)
         elif down:
-            self.h_upd = Downsample(channels, False)
+            self.h_upd = Downsample(channels, False) # resblock的输入通道做Downsample模块的输入通道和输出通道，第二个参数False表示不使用卷积，直接使用stride=2的平均池化
             self.x_upd = Downsample(channels, False)
         else:
             self.h_upd = self.x_upd = nn.Identity()
 
-        self.emb_layers = nn.Sequential(
+        self.emb_layers = nn.Sequential( # 嵌入层：激活-全连接，emb_channels（256） - self.out_channel
             SiLU(),
-            nn.Linear(
-                emb_channels,
+            nn.Linear( # 256 ->  self.out_channel
+                emb_channels, # 256
                 2 * self.out_channel if use_scale_shift_norm else self.out_channel,
             ),
         )
-        self.out_layers = nn.Sequential(
-            normalization(self.out_channel),
+        self.out_layers = nn.Sequential( # 输出层：规范化-激活-卷积；self.out_channel - self.out_channel
+            normalization(self.out_channel), # GroupNorm32
             SiLU(),
             nn.Dropout(p=dropout),
-            zero_module(
+            zero_module( # 将模块的参数归零，梯度与计算图分类（为什么）
                 nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
             ),
         )
 
-        if self.out_channel == channels:
-            self.skip_connection = nn.Identity()
-        elif use_conv:
-            self.skip_connection = nn.Conv2d(
+        if self.out_channel == channels: # 如果输入通道数和输出通道数相同
+            self.skip_connection = nn.Identity() # 跳跃连接为恒等映射
+        elif use_conv: # 如果输入通道数和输出通道数不同，且use_conv为True
+            self.skip_connection = nn.Conv2d( # 跳跃连接为卷积层，将通道数从channels变为self.out_channel
                 channels, self.out_channel, 3, padding=1
             )
         else:
@@ -218,25 +218,25 @@ class AttentionBlock(nn.Module):
         use_new_attention_order=False,
     ):
         super().__init__()
-        self.channels = channels
+        self.channels = channels # 512
         if num_head_channels == -1:
             self.num_heads = num_heads
         else:
             assert (
-                channels % num_head_channels == 0
+                channels % num_head_channels == 0 # channels必须要被num_head_channels整除
             ), f"q,k,v channels {channels} is not divisible by num_head_channels {num_head_channels}"
-            self.num_heads = channels // num_head_channels
+            self.num_heads = channels // num_head_channels # 512 // 32 = 16
         self.use_checkpoint = use_checkpoint
-        self.norm = normalization(channels)
-        self.qkv = nn.Conv1d(channels, channels * 3, 1)
-        if use_new_attention_order:
-            # split qkv before split heads
+        self.norm = normalization(channels) # GroupNorm32
+        self.qkv = nn.Conv1d(channels, channels * 3, 1) #1维卷积，表示输出数据的通道数。在自注意力机制中，通常需要生成 Q、K 和 V 三个张量，因此输出通道数是输入通道数的三倍，QKV是由一个卷积核shape为（512*3，512，1）的卷积层计算得到的，其中各个参数不同，所以生成的QKV三者不同
+        if use_new_attention_order: #如果使用新的注意力顺序
+            # split qkv before split heads # 在分割头之前分割qkv
             self.attention = QKVAttention(self.num_heads)
         else:
-            # split heads before split qkv
+            # split heads before split qkv # 在分割qkv之前分割头
             self.attention = QKVAttentionLegacy(self.num_heads)
 
-        self.proj_out = zero_module(nn.Conv1d(channels, channels, 1))
+        self.proj_out = zero_module(nn.Conv1d(channels, channels, 1)) # 1维卷积，512->512,将梯度从计算图中分离出来，然后将参数归零
 
     def forward(self, x):
         return checkpoint(self._forward, (x,), self.parameters(), True)
@@ -325,7 +325,7 @@ class UNet(nn.Module):
     :param attn_res: a collection of downsample rates at which
         attention will take place. May be a set, list, or tuple.
         For example, if this contains 4, then at 4x downsampling, attention
-        will be used.
+        will be used. #例如，如果这包含4，则在4倍下采样时将使用注意力。
     :param dropout: the dropout probability.
     :param channel_mults: channel multiplier for each level of the UNet.
     :param conv_resample: if True, use learned convolutions for upsampling and
@@ -366,51 +366,51 @@ class UNet(nn.Module):
         super().__init__()
 
         if num_heads_upsample == -1:
-            num_heads_upsample = num_heads
+            num_heads_upsample = num_heads #1
 
-        self.image_size = image_size
-        self.in_channel = in_channel
-        self.inner_channel = inner_channel
-        self.out_channel = out_channel
-        self.res_blocks = res_blocks
-        self.attn_res = attn_res
-        self.dropout = dropout
-        self.channel_mults = channel_mults
-        self.conv_resample = conv_resample
-        self.use_checkpoint = use_checkpoint
-        self.dtype = torch.float16 if use_fp16 else torch.float32
-        self.num_heads = num_heads
-        self.num_head_channels = num_head_channels
-        self.num_heads_upsample = num_heads_upsample
+        self.image_size = image_size #256
+        self.in_channel = in_channel #6
+        self.inner_channel = inner_channel #64
+        self.out_channel = out_channel #3
+        self.res_blocks = res_blocks #2
+        self.attn_res = attn_res#[16]
+        self.dropout = dropout #0.2
+        self.channel_mults = channel_mults #[1,2,4,8]
+        self.conv_resample = conv_resample #True
+        self.use_checkpoint = use_checkpoint # False
+        self.dtype = torch.float16 if use_fp16 else torch.float32 #torch.float32
+        self.num_heads = num_heads #1
+        self.num_head_channels = num_head_channels # 32
+        self.num_heads_upsample = num_heads_upsample #  1
 
-        cond_embed_dim = inner_channel * 4
-        self.cond_embed = nn.Sequential(
-            nn.Linear(inner_channel, cond_embed_dim),
-            SiLU(),
-            nn.Linear(cond_embed_dim, cond_embed_dim),
+        cond_embed_dim = inner_channel * 4 #256
+        self.cond_embed = nn.Sequential( # 条件嵌入 64 -> 256 -> 256
+            nn.Linear(inner_channel, cond_embed_dim), # 64 -> 256 全连接层
+            SiLU(), # 激活函数x * torch.sigmoid(x)
+            nn.Linear(cond_embed_dim, cond_embed_dim), # 256 -> 256 全连接层
         )
 
-        ch = input_ch = int(channel_mults[0] * inner_channel)
-        self.input_blocks = nn.ModuleList(
-            [EmbedSequential(nn.Conv2d(in_channel, ch, 3, padding=1))]
+        ch = input_ch = int(channel_mults[0] * inner_channel) # 64, inner_channel = 64 是模型基本通道数，channel_mults = [1,2,4,8] 是UNet的通道倍数
+        self.input_blocks = nn.ModuleList( # 输入块：卷积层；ModuleList,用于存储一系列 nn.Module 对象，相比nn.Sequential，它可以存储任意类型的模块，并且没有forward方法，所以不能像nn.Sequential那样直接调用
+            [EmbedSequential(nn.Conv2d(in_channel, ch, 3, padding=1))] # 6 -> 64 卷积层，HW不变
         )
-        self._feature_size = ch
-        input_block_chans = [ch]
-        ds = 1
-        for level, mult in enumerate(channel_mults):
-            for _ in range(res_blocks):
+        self._feature_size = ch # 64
+        input_block_chans = [ch] # [64]
+        ds = 1 #下面是进行下采样操作，每次下采样都会将ds乘以2，当ds达到16时，就会使用注意力机制
+        for level, mult in enumerate(channel_mults): # channel_mults = [1,2,4,8]，level = 0,1,2,3
+            for _ in range(res_blocks): # res_blocks = 2
                 layers = [
                     ResBlock(
-                        ch,
-                        cond_embed_dim,
-                        dropout,
-                        out_channel=int(mult * inner_channel),
-                        use_checkpoint=use_checkpoint,
-                        use_scale_shift_norm=use_scale_shift_norm,
+                        ch, # 64
+                        cond_embed_dim, # 256
+                        dropout, # 0.2
+                        out_channel=int(mult * inner_channel), #乘数*64
+                        use_checkpoint=use_checkpoint,# False
+                        use_scale_shift_norm=use_scale_shift_norm,# True
                     )
                 ]
-                ch = int(mult * inner_channel)
-                if ds in attn_res:
+                ch = int(mult * inner_channel) # 更新ch，用作ResBlock和AttensionBlock的输入通道数
+                if ds in attn_res: # attn_res = [16]，看ds是否达到16，当下采样率达到16倍，就使用注意力机制
                     layers.append(
                         AttentionBlock(
                             ch,
@@ -420,23 +420,23 @@ class UNet(nn.Module):
                             use_new_attention_order=use_new_attention_order,
                         )
                     )
-                self.input_blocks.append(EmbedSequential(*layers))
-                self._feature_size += ch
-                input_block_chans.append(ch)
-            if level != len(channel_mults) - 1:
+                self.input_blocks.append(EmbedSequential(*layers)) # 将定义的ResBlock layer和 AttentionBlock layer添加到输入块列表中
+                self._feature_size += ch # 更新_feature_size，用于计算输出块的输入通道数???
+                input_block_chans.append(ch) # 将输入块的通道数添加到列表中
+            if level != len(channel_mults) - 1: # 如果level不是最后一层，就添加下采样操作
                 out_ch = ch
-                self.input_blocks.append(
+                self.input_blocks.append( #在输入块中加入下ResBlock(down=True)或者下采样层
                     EmbedSequential(
-                        ResBlock(
+                        ResBlock( #这次的resblock的输入和输出通道一样
                             ch,
                             cond_embed_dim,
                             dropout,
                             out_channel=out_ch,
                             use_checkpoint=use_checkpoint,
                             use_scale_shift_norm=use_scale_shift_norm,
-                            down=True,
+                            down=True, # 下采样
                         )
-                        if resblock_updown
+                        if resblock_updown#如果 resblock_updown 为True，就使用ResBlock，否则使用下采样
                         else Downsample(
                             ch, conv_resample, out_channel=out_ch
                         )
@@ -444,25 +444,25 @@ class UNet(nn.Module):
                 )
                 ch = out_ch
                 input_block_chans.append(ch)
-                ds *= 2
+                ds *= 2 # 记录下采样率，每次加倍
                 self._feature_size += ch
 
         self.middle_block = EmbedSequential(
             ResBlock(
-                ch,
-                cond_embed_dim,
-                dropout,
-                use_checkpoint=use_checkpoint,
-                use_scale_shift_norm=use_scale_shift_norm,
+                ch, # 512
+                cond_embed_dim, # 256
+                dropout, # 0.2
+                use_checkpoint=use_checkpoint, # False
+                use_scale_shift_norm=use_scale_shift_norm, # True
             ),
             AttentionBlock(
-                ch,
-                use_checkpoint=use_checkpoint,
-                num_heads=num_heads,
-                num_head_channels=num_head_channels,
-                use_new_attention_order=use_new_attention_order,
+                ch, # 512
+                use_checkpoint=use_checkpoint,# False
+                num_heads=num_heads, # 1
+                num_head_channels=num_head_channels, # 32
+                use_new_attention_order=use_new_attention_order,# False
             ),
-            ResBlock(
+            ResBlock( # 512 -> 512，与上面的ResBlock一样
                 ch,
                 cond_embed_dim,
                 dropout,
@@ -472,7 +472,7 @@ class UNet(nn.Module):
         )
         self._feature_size += ch
 
-        self.output_blocks = nn.ModuleList([])
+        self.output_blocks = nn.ModuleList([]) #输出块：上采样操作
         for level, mult in list(enumerate(channel_mults))[::-1]:
             for i in range(res_blocks + 1):
                 ich = input_block_chans.pop()

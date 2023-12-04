@@ -41,7 +41,7 @@ def main_worker(gpu, ngpus_per_node, opt):
     metrics = [define_metric(phase_logger, item_opt) for item_opt in opt['model']['which_metrics']]
     losses = [define_loss(phase_logger, item_opt) for item_opt in opt['model']['which_losses']]
 
-    model = create_model(
+    model = create_model( #定义了Palette类，继承自BaseModel类
         opt = opt,
         networks = networks,
         phase_loader = phase_loader,
@@ -55,7 +55,7 @@ def main_worker(gpu, ngpus_per_node, opt):
     phase_logger.info('Begin model {}.'.format(opt['phase']))
     try:
         if opt['phase'] == 'train':
-            model.train()
+            model.train() # 调用BaseModel类中的train()函数，其中调用了子类Palette实现的train_step()函数
         else:
             model.test()
     finally:
@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     ''' parser configs '''
     args = parser.parse_args()
-    opt = Praser.parse(args)
+    opt = Praser.parse(args) # 自定义的类和函数，用于解析配置json文件
     
     ''' cuda devices '''
     gpu_str = ','.join(str(x) for x in opt['gpu_ids'])

@@ -14,15 +14,15 @@ class BaseNetwork(nn.Module):
     
     def init_func(m):
       classname = m.__class__.__name__
-      if classname.find('InstanceNorm2d') != -1:
+      if classname.find('InstanceNorm2d') != -1: # 对InstanceNorm2d
         if hasattr(m, 'weight') and m.weight is not None:
-          nn.init.constant_(m.weight.data, 1.0)
+          nn.init.constant_(m.weight.data, 1.0)#权重参数weight初始化为1
         if hasattr(m, 'bias') and m.bias is not None:
-          nn.init.constant_(m.bias.data, 0.0)
-      elif hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
-        if self.init_type == 'normal':
+          nn.init.constant_(m.bias.data, 0.0)#偏置bias初始化为0
+      elif hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1): # 对卷积层和全连接层
+        if self.init_type == 'normal':#正态分布初始化，均值为0，方差为0.02
           nn.init.normal_(m.weight.data, 0.0, self.gain)
-        elif self.init_type == 'xavier':
+        elif self.init_type == 'xavier': # xavier正态分布初始化
           nn.init.xavier_normal_(m.weight.data, gain=self.gain)
         elif self.init_type == 'xavier_uniform':
           nn.init.xavier_uniform_(m.weight.data, gain=1.0)
@@ -35,12 +35,12 @@ class BaseNetwork(nn.Module):
         else:
           raise NotImplementedError('initialization method [%s] is not implemented' % self.init_type)
         if hasattr(m, 'bias') and m.bias is not None:
-          nn.init.constant_(m.bias.data, 0.0)
+          nn.init.constant_(m.bias.data, 0.0) # 偏置bias初始化为0
 
-    self.apply(init_func)
-    # propagate to children
+    self.apply(init_func) # 对网络的每一层进行初始化
+    # propagate to children 
     for m in self.children():
-      if hasattr(m, 'init_weights'):
+      if hasattr(m, 'init_weights'): # 如果子网络也有init_weights方法，就调用子网络的init_weights方法
         m.init_weights(self.init_type, self.gain)
 
 

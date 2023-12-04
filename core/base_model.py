@@ -119,7 +119,7 @@ class BaseModel():
         self.logger.info('Loading pretrained model from [{:s}] ...'.format(model_path))
         if isinstance(network, nn.DataParallel) or isinstance(network, nn.parallel.DistributedDataParallel):
             network = network.module
-        network.load_state_dict(torch.load(model_path, map_location = lambda storage, loc: Util.set_device(storage)), strict=strict)
+        network.load_state_dict(torch.load(model_path, map_location = lambda storage, loc: Util.set_device(storage)), strict=strict) #从指定路径加载预训练模型的权重，并将这些权重应用到神经网络模型中，加载时，会根据 map_location 将权重映射到指定设备上，而 strict 参数控制是否进行严格的权重加载
 
     def save_training_state(self):
         """ saves training state during training, only work on GPU 0 """

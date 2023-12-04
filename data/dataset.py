@@ -16,8 +16,8 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 def make_dataset(dir):
-    if os.path.isfile(dir):
-        images = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')]
+    if os.path.isfile(dir): # 如果是文件
+        images = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')] #np.genfromtxt()函数用于从.csv文件或.tsv文件中生成数组
     else:
         images = []
         assert os.path.isdir(dir), '%s is not a valid directory' % dir
@@ -27,14 +27,14 @@ def make_dataset(dir):
                     path = os.path.join(root, fname)
                     images.append(path)
 
-    return images
+    return images # 返回所有图片的路径
 
 def pil_loader(path):
     return Image.open(path).convert('RGB')
 
 class InpaintDataset(data.Dataset):
     def __init__(self, data_root, mask_config={}, data_len=-1, image_size=[256, 256], loader=pil_loader):
-        imgs = make_dataset(data_root)
+        imgs = make_dataset(data_root) # 返回所有图片的路径，是一个List
         if data_len > 0:
             self.imgs = imgs[:int(data_len)]
         else:
@@ -44,7 +44,7 @@ class InpaintDataset(data.Dataset):
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5,0.5, 0.5])
         ])
-        self.loader = loader
+        self.loader = loader #Image.open(path).convert('RGB')
         self.mask_config = mask_config
         self.mask_mode = self.mask_config['mask_mode']
         self.image_size = image_size

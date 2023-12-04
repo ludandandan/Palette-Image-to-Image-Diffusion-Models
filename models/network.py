@@ -21,19 +21,19 @@ class Network(BaseNetwork):
 
     def set_new_noise_schedule(self, device=torch.device('cuda'), phase='train'):
         to_torch = partial(torch.tensor, dtype=torch.float32, device=device)
-        betas = make_beta_schedule(**self.beta_schedule[phase])
+        betas = make_beta_schedule(**self.beta_schedule[phase]) # list，train时是2000个
         betas = betas.detach().cpu().numpy() if isinstance(
             betas, torch.Tensor) else betas
         alphas = 1. - betas
 
-        timesteps, = betas.shape
+        timesteps, = betas.shape # timesteps=2000
         self.num_timesteps = int(timesteps)
         
         gammas = np.cumprod(alphas, axis=0)
         gammas_prev = np.append(1., gammas[:-1])
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.register_buffer('gammas', to_torch(gammas))
+        self.register_buffer('gammas', to_torch(gammas))#注册一个持久化的缓冲张量（buffer tensor），用于存储一些在模型训练过程中需要持久化的参数，例如在推理阶段使用的常量或者与模型相关的超参数。由于注册为缓冲区，gammas 将被模型保存并加载，但不会影响梯度计算
         self.register_buffer('sqrt_recip_gammas', to_torch(np.sqrt(1. / gammas)))
         self.register_buffer('sqrt_recipm1_gammas', to_torch(np.sqrt(1. / gammas - 1)))
 

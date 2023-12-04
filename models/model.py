@@ -22,11 +22,11 @@ class Palette(BaseModel):
         super(Palette, self).__init__(**kwargs)
 
         ''' networks, dataloder, optimizers, losses, etc. '''
-        self.loss_fn = losses[0]
-        self.netG = networks[0]
+        self.loss_fn = losses[0] # mae loss
+        self.netG = networks[0] # UNet
         if ema_scheduler is not None:
-            self.ema_scheduler = ema_scheduler
-            self.netG_EMA = copy.deepcopy(self.netG)
+            self.ema_scheduler = ema_scheduler #里面有ema_decay，ema_start，ema_iter 的dict
+            self.netG_EMA = copy.deepcopy(self.netG) # 复制了一份UNet
             self.EMA = EMA(beta=self.ema_scheduler['ema_decay'])
         else:
             self.ema_scheduler = None
@@ -37,7 +37,7 @@ class Palette(BaseModel):
             self.netG_EMA = self.set_device(self.netG_EMA, distributed=self.opt['distributed'])
         self.load_networks()
 
-        self.optG = torch.optim.Adam(list(filter(lambda p: p.requires_grad, self.netG.parameters())), **optimizers[0])
+        self.optG = torch.optim.Adam(list(filter(lambda p: p.requires_grad, self.netG.parameters())), **optimizers[0]) #optimzers{ "lr": 5e-5, "weight_decay": 0}，创建一个 Adam 优化器 (`self.optG`)，该优化器用于优化生成器模型 (`self.netG`) 中具有梯度的参数
         self.optimizers.append(self.optG)
         self.resume_training() 
 
@@ -45,16 +45,16 @@ class Palette(BaseModel):
             self.netG.module.set_loss(self.loss_fn)
             self.netG.module.set_new_noise_schedule(phase=self.phase)
         else:
-            self.netG.set_loss(self.loss_fn)
-            self.netG.set_new_noise_schedule(phase=self.phase)
+            self.netG.set_loss(self.loss_fn) # 将loss_fn赋值给Network的self.loss_fn
+            self.netG.set_new_noise_schedule(phase=self.phase) #这里计算了betas，alphas，gammas，后验方差，后验方差对数，后验均值系数1，2等有用的超参数
 
         ''' can rewrite in inherited class for more informations logging '''
         self.train_metrics = LogTracker(*[m.__name__ for m in losses], phase='train')
         self.val_metrics = LogTracker(*[m.__name__ for m in self.metrics], phase='val')
         self.test_metrics = LogTracker(*[m.__name__ for m in self.metrics], phase='test')
 
-        self.sample_num = sample_num
-        self.task = task
+        self.sample_num = sample_num #8 ，这是在config文件中的参数
+        self.task = task # inpainting，这是在config文件中的参数
         
     def set_input(self, data):
         ''' must use set_device in tensor '''
@@ -205,7 +205,7 @@ class Palette(BaseModel):
             netG_label = self.netG.module.__class__.__name__
         else:
             netG_label = self.netG.__class__.__name__
-        self.load_network(network=self.netG, network_label=netG_label, strict=False)
+        self.load_network(network=self.netG, network_label=netG_label, strict=False) # resume 加载模型的权重
         if self.ema_scheduler is not None:
             self.load_network(network=self.netG_EMA, network_label=netG_label+'_ema', strict=False)
 

@@ -9,7 +9,7 @@ import torch.nn as nn
 
 
 class GroupNorm32(nn.GroupNorm):
-    def forward(self, x):
+    def forward(self, x): #自定义模块 GroupNorm32 主要是在 nn.GroupNorm 的基础上，通过在前向传播中进行类型转换，确保输出的数据类型与输入一致
         return super().forward(x.float()).type(x.dtype)
 
 
@@ -17,8 +17,8 @@ def zero_module(module):
     """
     Zero out the parameters of a module and return it.
     """
-    for p in module.parameters():
-        p.detach().zero_()
+    for p in module.parameters():# 对于module中的每一个参数
+        p.detach().zero_()# 使用 detach() 方法将其与计算图分离，然后使用 zero_() 方法将参数的值归零
     return module
 
 
