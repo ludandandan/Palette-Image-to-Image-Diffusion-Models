@@ -12,6 +12,10 @@ class GroupNorm32(nn.GroupNorm):
     def forward(self, x): #自定义模块 GroupNorm32 主要是在 nn.GroupNorm 的基础上，通过在前向传播中进行类型转换，确保输出的数据类型与输入一致
         return super().forward(x.float()).type(x.dtype)
 
+class BatchNorm32(nn.BatchNorm2d): # 用batchNorm替换掉GroupNorm32试试效果
+    def forward(self, x):
+        return super().forward(x.float()).type(x.dtype)
+
 
 def zero_module(module):
     """
@@ -45,7 +49,8 @@ def normalization(channels):
     :param channels: number of input channels.
     :return: an nn.Module for normalization.
     """
-    return GroupNorm32(32, channels)
+    #return GroupNorm32(32, channels)
+    return BatchNorm32(channels)
 
 
 

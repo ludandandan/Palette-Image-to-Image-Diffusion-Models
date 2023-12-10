@@ -10,7 +10,7 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        //"resume_state": "experiments/train_sketch_fs2k_231206_210853/checkpoint/550" 
+        //"resume_state": "experiments/train_sketch_celebahq_231208_172927/checkpoint/200" 
         "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
@@ -72,7 +72,7 @@
                     "ema_decay": 0.9999
                 },
                 "optimizers": [
-                    { "lr": 5e-6, "weight_decay": 0}
+                    { "lr": 1e-5, "weight_decay": 0}
                 ]
             }
         }, 
