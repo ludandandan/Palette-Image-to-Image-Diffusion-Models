@@ -183,7 +183,7 @@ class ResBlock(EmbedBlock):
 
     def _forward(self, x, emb):
         if self.updown:
-            in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
+            in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1] # 把in_layer分成两部分
             h = in_rest(x)
             h = self.h_upd(h)
             x = self.x_upd(x)
@@ -195,7 +195,7 @@ class ResBlock(EmbedBlock):
             emb_out = emb_out[..., None]
         if self.use_scale_shift_norm:
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
-            scale, shift = torch.chunk(emb_out, 2, dim=1)
+            scale, shift = torch.chunk(emb_out, 2, dim=1)#用于按照指定的维度将张量分割成若干块，沿着dim=1即通道维度，将emb_out分割为2块
             h = out_norm(h) * (1 + scale) + shift
             h = out_rest(h)
         else:
@@ -254,7 +254,7 @@ class AttentionBlock(nn.Module):
 
 class QKVAttentionLegacy(nn.Module):
     """
-    A module which performs QKV attention. Matches legacy QKVAttention + input/ouput heads shaping
+    A module which performs QKV attention. Matches legacy QKVAttention + input/ouput heads shaping一个执行QKV（Query-Key-Value）注意力操作的模块。与传统的QKVAttention模块相匹配，还包括输入/输出头部形状调整
     """
 
     def __init__(self, n_heads):
@@ -264,20 +264,20 @@ class QKVAttentionLegacy(nn.Module):
     def forward(self, qkv):
         """
         Apply QKV attention.
-        :param qkv: an [N x (H * 3 * C) x T] tensor of Qs, Ks, and Vs.
+        :param qkv: an [N x (H * 3 * C) x T] tensor of Qs, Ks, and Vs. N是批量大小，H是注意力头的个数，C是每个头的维度，T是序列长度
         :return: an [N x (H * C) x T] tensor after attention.
         """
-        bs, width, length = qkv.shape
+        bs, width, length = qkv.shape #获取形状信息，bs批量大小，width宽度，length序列长度
         assert width % (3 * self.n_heads) == 0
-        ch = width // (3 * self.n_heads)
-        q, k, v = qkv.reshape(bs * self.n_heads, ch * 3, length).split(ch, dim=1)
-        scale = 1 / math.sqrt(math.sqrt(ch))
+        ch = width // (3 * self.n_heads)# 计算每个头的维度
+        q, k, v = qkv.reshape(bs * self.n_heads, ch * 3, length).split(ch, dim=1)#重塑形状并分割，qkv每一个的形状变为[bs * self.n_heads, ch, length]
+        scale = 1 / math.sqrt(math.sqrt(ch))# 计算缩放系数，用于缩放Q和K的值，目的是控制注意力权重的分布
         weight = torch.einsum(
-            "bct,bcs->bts", q * scale, k * scale
-        )  # More stable with f16 than dividing afterwards
-        weight = torch.softmax(weight.float(), dim=-1).type(weight.dtype)
-        a = torch.einsum("bts,bcs->bct", weight, v)
-        return a.reshape(bs, -1, length)
+            "bct,bcs->bts", q * scale, k * scale #表示bct形状的张量与bcs形状的张量相乘得到bts形状的张量
+        )  # More stable with f16 than dividing afterwards 某些情况下先缩放再乘法比先乘法再缩放更稳定
+        weight = torch.softmax(weight.float(), dim=-1).type(weight.dtype)# 使用torch.softmax对权重进行规范化
+        a = torch.einsum("bts,bcs->bct", weight, v)#应用注意力权重到值向量上
+        return a.reshape(bs, -1, length)#重塑为[N x (H * C) x T]
 
     @staticmethod
     def count_flops(model, _x, y):
@@ -299,14 +299,14 @@ class QKVAttention(nn.Module):
         :param qkv: an [N x (3 * H * C) x T] tensor of Qs, Ks, and Vs.
         :return: an [N x (H * C) x T] tensor after attention.
         """
-        bs, width, length = qkv.shape
+        bs, width, length = qkv.shape #bs批量大小，width宽度（其实是通道维度），length序列长度（其实是宽度和高度reshap之后的）
         assert width % (3 * self.n_heads) == 0
         ch = width // (3 * self.n_heads)
-        q, k, v = qkv.chunk(3, dim=1)
+        q, k, v = qkv.chunk(3, dim=1) # 将qkv分割为3个张量（其实是沿着通道维度分割），每个张量的形状为[bs, n_heads * ch, length]
         scale = 1 / math.sqrt(math.sqrt(ch))
         weight = torch.einsum(
             "bct,bcs->bts",
-            (q * scale).view(bs * self.n_heads, ch, length),
+            (q * scale).view(bs * self.n_heads, ch, length), # 将q和k的形状变为[bs * self.n_heads, ch, length]
             (k * scale).view(bs * self.n_heads, ch, length),
         )  # More stable with f16 than dividing afterwards
         weight = torch.softmax(weight.float(), dim=-1).type(weight.dtype)
@@ -475,8 +475,8 @@ class UNet(nn.Module):
         self._feature_size += ch
 
         self.output_blocks = nn.ModuleList([]) #输出块：上采样操作
-        for level, mult in list(enumerate(channel_mults))[::-1]:
-            for i in range(res_blocks + 1):
+        for level, mult in list(enumerate(channel_mults))[::-1]:#level = 3,2,1,0， mult = 8,4,2,1
+            for i in range(res_blocks + 1): # res_blocks = 2
                 ich = input_block_chans.pop()
                 layers = [
                     ResBlock(
@@ -499,7 +499,7 @@ class UNet(nn.Module):
                             use_new_attention_order=use_new_attention_order,
                         )
                     )
-                if level and i == res_blocks:
+                if level and i == res_blocks: # 当level=0时，不再添加上采样层
                     out_ch = ch
                     layers.append(
                         ResBlock(
@@ -533,7 +533,7 @@ class UNet(nn.Module):
         """
         hs = []
         gammas = gammas.view(-1, )
-        emb = self.cond_embed(gamma_embedding(gammas, self.inner_channel))
+        emb = self.cond_embed(gamma_embedding(gammas, self.inner_channel)) #self.inner_channel = 64
 
         h = x.type(torch.float32)
         for module in self.input_blocks:

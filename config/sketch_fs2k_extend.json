@@ -1,5 +1,5 @@
 {
-    "name": "sketch_celebahq", // experiments name
+    "name": "sketch_fs2k_extend", // experiments name
     "gpu_ids": [0], // gpu ids list, default is single 0
     "seed" : -1, // random seed, seed <0 represents randomization not used 
     "finetune_norm": false, // find the parameters to optimize
@@ -10,8 +10,8 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        //"resume_state": "experiments/train_sketch_celebahq_231214_104729/checkpoint/530" 
-        "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
+        "resume_state": "experiments/train_sketch_celebahq_240310_105841/checkpoint/20" 
+        //"resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
     "datasets": { // train or test
@@ -19,8 +19,8 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "SketchDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "datasets/celebahq_sketch/images",
-                    "data_flist": "datasets/celebahq_sketch/flist/train.flist",
+                    "data_root": "datasets/fs2k_extend_sketch/images",
+                    "data_flist": "datasets/fs2k_extend_sketch/flist/train.flist",
                     "data_len": -1
                 } 
             },
@@ -46,8 +46,8 @@
             "which_dataset": {
                 "name": "SketchDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "datasets/celebahq_sketch/images",
-                    "data_flist": "datasets/celebahq_sketch/flist/test.flist"
+                    "data_root": "datasets/fs2k_extend_sketch/images",
+                    "data_flist": "datasets/fs2k_extend_sketch/flist/test.flist"
                 }
             },
             "dataloader":{
@@ -72,7 +72,7 @@
                     "ema_decay": 0.9999
                 },
                 "optimizers": [
-                    { "lr": 5e-5, "weight_decay": 0}
+                    { "lr": 1e-6, "weight_decay": 0}
                 ]
             }
         }, 
@@ -107,7 +107,7 @@
                             "schedule": "linear",
                             "n_timestep": 2000,
                             // "n_timestep": 5, // debug
-                            "linear_start": 1e-5,
+                            "linear_start": 1e-6,
                             "linear_end": 0.01
                         },
                         "test": {
@@ -129,10 +129,10 @@
     },
 
     "train": { // arguments for basic training
-        "n_epoch": 1e8, // max epochs, not limited now
+        "n_epoch": 110,//1e8, // max epochs, not limited now
         "n_iter": 1e8, // max interations
-        "val_epoch": 5,//5, // valdation every specified number of epochs
-        "save_checkpoint_epoch": 10,//10,
+        "val_epoch": 5, // valdation every specified number of epochs
+        "save_checkpoint_epoch": 10,
         "log_iter": 1e4, // log every specified number of iterations
         "tensorboard" : true // tensorboardX enable
     },

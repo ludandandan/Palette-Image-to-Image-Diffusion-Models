@@ -58,12 +58,12 @@ def checkpoint(func, inputs, params, flag):
     """
     Evaluate a function without caching intermediate activations, allowing for
     reduced memory at the expense of extra compute in the backward pass.
-
-    :param func: the function to evaluate.
-    :param inputs: the argument sequence to pass to `func`.
+    评估一个函数，不缓存中间激活值，从而在减小内存占用的同时，付出在反向传播过程中增加计算量的代价。
+    :param func: the function to evaluate. 要评估的函数
+    :param inputs: the argument sequence to pass to `func`. 传递给func的参数序列
     :param params: a sequence of parameters `func` depends on but does not
-                   explicitly take as arguments.
-    :param flag: if False, disable gradient checkpointing.
+                   explicitly take as arguments. func依赖但不显式作为参数传递的参数序列
+    :param flag: if False, disable gradient checkpointing. 若flag为False，则禁用梯度检查点
     """
     if flag:
         args = tuple(inputs) + tuple(params)

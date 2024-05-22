@@ -45,7 +45,7 @@ class Network(BaseNetwork):
         self.register_buffer('posterior_mean_coef2', to_torch((1. - gammas_prev) * np.sqrt(alphas) / (1. - gammas)))
 
     def predict_start_from_noise(self, y_t, t, noise):
-        return (
+        return ( #预测出噪声后，就可以用“从y0可以直接到yt的那个公式的变换，得到从yt到y0”
             extract(self.sqrt_recip_gammas, t, y_t.shape) * y_t -
             extract(self.sqrt_recipm1_gammas, t, y_t.shape) * noise
         )
@@ -118,9 +118,43 @@ class Network(BaseNetwork):
         if mask is not None:
             noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy*mask+(1.-mask)*y_0], dim=1), sample_gammas)
             loss = self.loss_fn(mask*noise, mask*noise_hat)
+            #print('loss', loss)
+            # 再添加一个loss，计算从y_noisy经过网络恢复到y_0之后，与真实y_0的差异
+            #y_0_hat = self.predict_start_from_noise(y_noisy, t=t, noise=noise_hat)
+            #loss_t= self.loss_fn(mask*y_0, mask*y_0_hat)   
+            #print('loss_t', loss_t)         
         else:
             noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy], dim=1), sample_gammas)
             loss = self.loss_fn(noise, noise_hat)
+            #print('loss', loss)
+            # 再添加一个loss，计算从y_noisy经过网络恢复到y_0之后，与真实y_0的差异
+            #y_0_hat = self.predict_start_from_noise(y_noisy, t=t, noise=noise_hat)
+            #loss_t= self.loss_fn(y_0, y_0_hat)
+            #print('loss_t', loss_t)
+
+        
+        # 再添加一个loss，用于计算y_T经过网络恢复为y_0之后，与真实y_0的差异
+        #t_T = torch.full((b,), self.num_timesteps-1, device=y_0.device, dtype=torch.long)
+        #gamma_t1_T = extract(self.gammas, t_T-1, x_shape=(1, 1))
+        #sqrt_gamma_t2_T = extract(self.gammas, t_T, x_shape=(1, 1))
+        #sample_gammas_T = (sqrt_gamma_t2_T-gamma_t1_T) * torch.rand((b, 1), device=y_0.device) + gamma_t1_T
+        #sample_gammas_T = sample_gammas_T.view(b, -1)
+        #noise_T = default(noise, lambda: torch.randn_like(y_0))
+        #y_noisy_T = self.q_sample(
+        #    y_0=y_0, sample_gammas=sample_gammas_T.view(-1, 1, 1, 1), noise=noise_T)
+        #if mask is not None:
+        #    y_0_hat = self.predict_start_from_noise(
+        #        y_noisy_T, t=t_T, noise=self.denoise_fn(torch.cat([y_cond, y_noisy_T*mask+(1.-mask)*y_0], dim=1), sample_gammas_T))
+        #    loss_T = self.loss_fn(mask*y_0, mask*y_0_hat)
+        #    print('loss_T', loss_T)
+        #else:
+        #    y_0_hat = self.predict_start_from_noise(
+        #        y_noisy_T, t=t_T, noise=self.denoise_fn(torch.cat([y_cond, y_noisy_T], dim=1), sample_gammas_T))
+        #    loss_T = self.loss_fn(y_0, y_0_hat)
+        #    print('loss_T', loss_T)
+        
+        #loss = loss + 0.01*loss_t
+    
         return loss
 
 
